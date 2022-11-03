@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 export const getDays = (year, month) => {
     return new Date(year, month, 0).getDate();
 };
@@ -43,7 +45,7 @@ export const getDaysListWithDayName = (theDaysListInSelectedMonth, theCurrentYea
     theDaysListInSelectedMonth.map((day) => {
         newDaysList.push({
             date: padTo2Digits(day),
-            name: getHeaderDayName(theCurrentYear, theCurrentMonth, padTo2Digits(day))
+            name: getHeaderDayName(theCurrentYear, padTo2Digits(theCurrentMonth), padTo2Digits(day))
         })
     })
     return newDaysList;
@@ -149,3 +151,64 @@ export function getDayOfWeek(date = new Date()) {
         weekday: 'long',
     });
 }
+
+
+export const isStartDateOverflowing = (theCurrentMonthStartDate, startDate) => {
+    const dateDiff = dayjs(startDate).diff(theCurrentMonthStartDate, 'days');
+
+    if (dateDiff >= 0) {
+        return false
+    }
+
+    return true
+}
+
+export const getCurrentMonthStartDate = (theCurrentMonthStartDate, startDate) => {
+    const dateDiff = dayjs(startDate).diff(theCurrentMonthStartDate, 'days');
+
+    if (dateDiff >= 0) {
+        return startDate
+    }
+
+    return theCurrentMonthStartDate
+}
+
+export const isEndDateOverflowing = (theCurrentMonthEndDate, endDate) => {
+    const dateDiff = dayjs(endDate).diff(theCurrentMonthEndDate, 'days');
+
+    if (dateDiff > 0) {
+        return true
+    }
+
+    return false
+}
+
+export const getCurrentMonthEndDate = (theCurrentMonthEndDate, endDate) => {
+    const dateDiff = dayjs(endDate).diff(theCurrentMonthEndDate, 'days');
+
+    if (dateDiff > 0) {
+        return theCurrentMonthEndDate
+    }
+
+    return endDate
+}
+
+export const getJobSpan = (startDate, endDate, theCurrentMonthStartDate, theCurrentMonthEndDate) => {
+    const daysDiff = dayjs(getCurrentMonthEndDate(theCurrentMonthEndDate, endDate)).diff(getCurrentMonthStartDate(theCurrentMonthStartDate, startDate), 'days') + 1;
+    // return `calc(${daysDiff*100}% + ${daysDiff*1}px)`
+    return `calc(${daysDiff * 100}% + ${daysDiff * 1}px)`
+}
+
+export function isToday(date) {
+    const today = new Date();
+
+    // 👇️ Today's date
+    // console.log(today);
+
+    if (today.toDateString() === date.toDateString()) {
+        return true;
+    }
+
+    return false;
+}
+

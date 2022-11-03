@@ -1,12 +1,17 @@
 <script>
     import {
-        arrayRange,
-        dateDiff,
-        getCurrentMonth,
+        arrayRange, getCurrentMonth,
+        getCurrentMonthEndDate,
+        getCurrentMonthStartDate,
         getDaysListWithDayName,
+        getJobSpan,
         getMonthsDaysHashmap,
+        isEndDateOverflowing,
+        isStartDateOverflowing,
         isWeekend,
-        padTo2Digits
+        months,
+        padTo2Digits,
+        isToday
     } from "./utils";
 
     const employeesList = [
@@ -17,8 +22,8 @@
                 {
                     label: 'Annual Leave',
                     bgColor: '#FFC002',
-                    startDate: '2022-11-01',
-                    endDate: '2022-11-09',
+                    startDate: '2022-08-31',
+                    endDate: '2022-12-15',
                 }
             ]
         },
@@ -34,7 +39,7 @@
                 {
                     label: 'Sick Leave',
                     bgColor: '#FF7C80',
-                    startDate: '2022-11-03',
+                    startDate: '2022-06-03',
                     endDate: '2022-11-17',
                 },
                 {
@@ -89,37 +94,42 @@
     ]
 
     const currentYear = 2022;
-    const currentMonth = getCurrentMonth();
+    let currentMonth = getCurrentMonth();
+
+    $: currentMonthName = months[currentMonth - 1].month;
 
     const monthDaysHashMap = getMonthsDaysHashmap(currentYear);
-    const daysInSelectedMonth = monthDaysHashMap[currentMonth.toString()];
-    const daysListInSelectedMonth = arrayRange(daysInSelectedMonth);
+    $: daysInSelectedMonth = monthDaysHashMap[currentMonth.toString()];
+    $: daysListInSelectedMonth = arrayRange(daysInSelectedMonth);
 
-    const daysListWithDayName = getDaysListWithDayName(daysListInSelectedMonth, currentYear, currentMonth);
+    $: currentMonthStartDate = `${currentYear}-${padTo2Digits(currentMonth)}-${padTo2Digits(1)}`
+    $: currentMonthEndDate = `${currentYear}-${padTo2Digits(currentMonth)}-${padTo2Digits(daysInSelectedMonth)}`
 
-    const getDateFromDay = (theDay) => {
+    $: daysListWithDayName = getDaysListWithDayName(daysListInSelectedMonth, currentYear, currentMonth);
+
+    $: getDateFromDay = (theDay) => {
         return `${currentYear}-${padTo2Digits(currentMonth)}-${padTo2Digits(theDay)}`
     }
 
-    const getJobSpan = (startDate, endDate) => {
-        console.log(dateDiff(new Date(startDate), new Date(endDate)))
+    const onNextMonth = () => {
+        currentMonth = currentMonth + 1;
+    }
 
-        const diff = dateDiff(new Date(startDate), new Date(endDate));
-        const daysDiff = diff.days + 1;
-
-        // return `calc(${daysDiff*100}% + ${daysDiff*1}px)`
-        return `calc(${daysDiff * 100}% + ${daysDiff * 1}px)`
+    const onPrevMonth = () => {
+        currentMonth = currentMonth - 1;
     }
 </script>
 
 
 <style>
     :root {
+        --scheduler-top-bar-height: 40px;
         --scheduler-border-color: #BFBFBF;
         --scheduler-row-border-bottom-color: #808080;
         --scheduler-header-bg-color: #FFFBEF;
         --scheduler-header-text-color: #0D2935;
         --scheduler-weekend-color: hsl(0deg 0% 88%);
+        --scheduler-today-color: hsl(135deg 97% 37% / 20%);
         --scheduler-bars-count: 12;
         --scheduler-bars-size: minmax(40px, 1fr);
         --schedular-employees-column-width: 150px;
@@ -127,19 +137,20 @@
     }
 
     .grid-scroller {
-        overflow: scroll;
-        height: 300px;
-        width: 90vw;
+        overflow: auto;
+        height: 320px;
+        width: 98vw;
         border-right: 1px solid #000;
         border-bottom: 1px solid #000;
+        box-sizing: border-box;
     }
 
-    .position__fixed--left{
+    .position__fixed--left {
         position: sticky;
         left: 0;
     }
 
-    .position__fixed--top{
+    .position__fixed--top {
         position: sticky;
         top: 0;
     }
@@ -150,6 +161,7 @@
         /*border: 1px solid #000;*/
     }
 
+
     .gantt__row-resource {
         background-color: whitesmoke;
         color: rgba(0, 0, 0, 0.726);
@@ -159,11 +171,11 @@
         text-align: center;
     }
 
-    .gantt__row-resource:last-child{
+    .gantt__row-resource:last-child {
         border-bottom: none;
     }
 
-    .gantt__row-resource-header-title{
+    .gantt__row-resource-header-title {
         font-weight: bold;
         display: grid;
         align-content: center;
@@ -181,7 +193,7 @@
         position: relative;
     }
 
-    .gantt__row-period:last-child{
+    .gantt__row-period:last-child {
         border-bottom: none;
     }
 
@@ -212,8 +224,12 @@
         height: 56px;
     }
 
-    .gantt__row-item:last-child{
+    .gantt__row-item:last-child {
         border-right: none;
+    }
+
+    .gantt__row-item[data-is-today='YES'] {
+        background-color: var(--scheduler-today-color);
     }
 
     .gantt__row-item[data-is-weekend='YES'] {
@@ -228,13 +244,21 @@
         color: #C65911;
     }
 
-    .gantt__row--header{
-        height: 56px;
-        background: var(--scheduler-header-bg-color);
+    .gantt__row-top-bar {
+        height: var(--scheduler-top-bar-height);
         position: sticky;
         top: 0;
         z-index: 15;
         border-top: 1px solid #000;
+        box-sizing: border-box;
+    }
+
+    .gantt__row--header {
+        height: 56px;
+        background: var(--scheduler-header-bg-color);
+        position: sticky;
+        top: var(--scheduler-top-bar-height);
+        z-index: 15;
     }
 
     .gantt__row--header-item {
@@ -244,17 +268,17 @@
         background: transparent;
     }
 
-    .gantt__row-resource.position__fixed--left{
+    .gantt__row-resource.position__fixed--left {
         z-index: 18;
     }
 
-    .gantt__row-item.gantt__row--header{
+    .gantt__row-item.gantt__row--header {
         position: sticky;
         top: 0;
         z-index: 15;
     }
 
-    .gantt__row--header.position__fixed--left{
+    .gantt__row--header.position__fixed--left, .gantt__row-top-bar.position__fixed--left {
         z-index: 20;
     }
 
@@ -272,7 +296,6 @@
         font-size: 12px;
         min-height: 15px;
         background-color: transparent;
-        /*padding: 2px 4px;*/
         color: #000;
         font-weight: bold;
         overflow: hidden;
@@ -283,6 +306,15 @@
 
         box-sizing: border-box;
         padding-inline: 6px;
+        transition: width 500ms ease-in-out;
+    }
+
+    .gantt__row_activity-wrapper[data-has-start-date-overflow='YES'] {
+        padding-inline-start: 0;
+    }
+
+    .gantt__row_activity-wrapper[data-has-end-date-overflow='YES'] {
+        padding-inline-end: 0;
     }
 
     .gantt__row_activity {
@@ -290,13 +322,46 @@
         border-radius: 4px;
         box-sizing: border-box;
         padding-inline: 6px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
 
+    .gantt__row_activity-wrapper[data-has-start-date-overflow='YES'] .gantt__row_activity {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    .gantt__row_activity-wrapper[data-has-end-date-overflow='YES'] .gantt__row_activity {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
     }
 </style>
 
 
+<div>
+    <button on:click={onPrevMonth} disabled={currentMonth=== 1}>
+        Prev
+    </button>
+
+    <button on:click={onNextMonth} disabled={currentMonth=== 12}>
+        Next
+    </button>
+</div>
+
+
 <div class="grid-scroller">
     <div class="gantt__container">
+        <div class="gantt__row-resource gantt__row-top-bar position__fixed--left position__fixed--top">
+            <div>
+
+            </div>
+        </div>
+        <div class="gantt__row-period gantt__row-top-bar">
+            {currentMonthName}
+        </div>
+
+
         <div class="gantt__row-resource gantt__row--header position__fixed--left position__fixed--top">
             <div class="gantt__row-resource-header-title">
                 EMPLOYEES
@@ -313,27 +378,38 @@
             {/each}
         </div>
 
+
         {#each employeesList as employee}
             <div class="gantt__row-resource position__fixed--left">
                 {employee.full_name}
             </div>
             <div class="gantt__row-period">
                 {#each daysListWithDayName as day, dayIndex}
-                    <div
-                            class="gantt__row-item"
-                            data-date={getDateFromDay(day.date)}
-                            data-resource={employee.employee_id}
-                            data-is-weekend={isWeekend(new Date(getDateFromDay(day.date))) ? 'YES': 'NO'}
-                            data-day-of-the-week={day.name}
+                    <div class="gantt__row-item"
+                         data-date={getDateFromDay(day.date)}
+                         data-resource={employee.employee_id}
+                         data-is-weekend={isWeekend(new Date(getDateFromDay(day.date))) ? 'YES': 'NO'}
+                         data-is-today={isToday(new Date(getDateFromDay(day.date))) ? 'YES': 'NO'}
+                         data-day-of-the-week={day.name}
                     >
                         {#each employee.leave_transactions as transaction}
-                            {#if getDateFromDay(day.date) === transaction.startDate}
-                                <div class="gantt__row_activity-wrapper"
-                                     style="width: {getJobSpan(transaction.startDate, transaction.endDate)};">
-                                    <div class="gantt__row_activity" style="background-color: {transaction.bgColor};">
-                                        {transaction.label}
+                            {#if getDateFromDay(day.date) >= getCurrentMonthStartDate(currentMonthStartDate, transaction.startDate) && getDateFromDay(day.date) <= getCurrentMonthEndDate(currentMonthEndDate, transaction.endDate)}
+                                {#if getDateFromDay(day.date) === getCurrentMonthStartDate(currentMonthStartDate, transaction.startDate)}
+                                    <div class="gantt__row_activity-wrapper"
+                                         style="width: {getJobSpan(transaction.startDate, transaction.endDate, currentMonthStartDate, currentMonthEndDate)};"
+                                         data-start-date={transaction.startDate}
+                                         data-end-date={transaction.endDate}
+                                         data-has-start-date-overflow={isStartDateOverflowing(currentMonthStartDate, transaction.startDate) ? 'YES': 'NO'}
+                                         data-has-end-date-overflow={isEndDateOverflowing(currentMonthEndDate, transaction.endDate) ? 'YES': 'NO'}
+                                    >
+                                        <div class="gantt__row_activity"
+                                             style="background-color: {transaction.bgColor};"
+                                             title={transaction.label}
+                                        >
+                                            {transaction.label}
+                                        </div>
                                     </div>
-                                </div>
+                                {/if}
                             {/if}
                         {/each}
                     </div>
