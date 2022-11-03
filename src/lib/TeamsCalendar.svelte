@@ -1,4 +1,6 @@
 <script lang="ts">
+    import {arrayRange, getCurrentMonth, getDaysListWithDayName, getMonthsDaysHashmap} from "./utils";
+
     const employeesList = [
         {
             full_name: 'Barnard Posselt',
@@ -59,73 +61,14 @@
         }
     ]
 
-    const getDays = (year, month) => {
-        return new Date(year, month, 0).getDate();
-    };
-
-    const getCurrentMonth = () => {
-        return new Date().getMonth() + 1;
-    }
-
-    function getDayName(date = new Date(), locale = 'en-US') {
-        return date.toLocaleDateString(locale, {weekday: 'short'});
-    }
-
-    function padTo2Digits(num) {
-        return num.toString().padStart(2, '0');
-    }
-
-    /*const dateStr = `${currentYear}-${currentMonth}-29`;
-
-    // 👇️ "Friday"
-    console.log(getDayName(new Date(dateStr)));*/
-
-    const getHeaderDayName = (theCurrentYear,theCurrentMonth, theDay) => {
-        return getDayName(new Date(`${theCurrentYear}-${theCurrentMonth}-${theDay}`))
-    }
-
     const currentYear = 2022;
     const currentMonth = getCurrentMonth();
 
-    const months = [
-        {month: 'January'},
-        {month: 'February'},
-        {month: 'March'},
-        {month: 'April'},
-        {month: 'May'},
-        {month: 'June'},
-        {month: 'July'},
-        {month: 'August'},
-        {month: 'September'},
-        {month: 'October'},
-        {month: 'November'},
-        {month: 'December'},
-    ]
-
-    const monthDaysHashMap = {}
-
-    months.map((month, monthIndex) => {
-        monthDaysHashMap[monthIndex + 1] = getDays(2021, monthIndex + 1);
-    })
-
-    const arrayRange = (end, start = 1) => {
-        return [...Array(end - start + 1).keys()].map(x => x + start);
-    }
-
+    const monthDaysHashMap = getMonthsDaysHashmap(currentYear);
     const daysInSelectedMonth = monthDaysHashMap[currentMonth.toString()];
     const daysListInSelectedMonth = arrayRange(daysInSelectedMonth);
 
-    const getDaysListWithDayName = (theCurrentYear, theCurrentMonth) => {
-        const newDaysList = [];
-        daysListInSelectedMonth.map((day) => {
-            newDaysList.push({
-                date: padTo2Digits(day),
-                name: getHeaderDayName(theCurrentYear, theCurrentMonth, day)
-            })
-        })
-        return newDaysList;
-    }
-    const daysListWithDayName = getDaysListWithDayName(currentYear, currentMonth);
+    const daysListWithDayName = getDaysListWithDayName(daysListInSelectedMonth, currentYear, currentMonth);
 
 </script>
 
@@ -141,7 +84,8 @@
             </span>
         {/each}
     </div>
-    <div class="scheduler__row scheduler__row--lines" style="--scheduler-bars-count: {daysInSelectedMonth};" data-month={currentMonth}>
+    <div class="scheduler__row scheduler__row--lines" style="--scheduler-bars-count: {daysInSelectedMonth};"
+         data-month={currentMonth}>
         <span class="marker"></span>
         {#each daysListInSelectedMonth as day}
             <span></span>
@@ -211,7 +155,7 @@
     .scheduler__row--lines span {
         display: block;
         border-right: 1px solid rgba(0, 0, 0, 0.1);
-        z-index:3;
+        z-index: 3;
     }
 
     .scheduler__row--lines span.marker {
@@ -247,7 +191,7 @@
         padding: 4px 8px;
     }
 
-    .scheduler__row--header-day{
+    .scheduler__row--header-day {
         display: flex;
         flex-direction: column;
         gap: 2px;
